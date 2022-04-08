@@ -1,5 +1,9 @@
 pipeline {
     agent any
+    
+    environment {
+        DOCKERHUB_CREDENTIALS=credentials('docker-hub-cred')
+    }
 
     stages {
         stage('Checkout') {
@@ -38,51 +42,59 @@ pipeline {
                 }
             }
         }
-        stage('Transfert File') {
-            steps {
-                script {
-                    sshPublisher(publishers: [
-                        sshPublisherDesc(configName: 'docker-host', transfers:[
-                            sshTransfer(
-                              sourceFiles:"target/*.jar",
-                              removePrefixe:"target",
-                              removeDirectory:"//home//vagrant",
-                              execCommand:"ls /"
-                            ),
-                            sshTransfer(
-                              sourceFiles:"Dockerfile",
-                              removePrefixe:"",
-                              removeDirectory:"//home//vagrant",
-                              execCommand: ''' 
-                                    cd /home/vagrant;
-                                    sudo docker build -t demo-isika .;
-                                    sudo docker run -d --name demo-isika3 -p 8080:8080 demo-isika;
-                              '''
-                            )    
-                        ])
-                    ])                
-                }
-            }
-        }
         stage('Cleaning') {
             steps {
                 echo '-=- Clean docker images & container -=-'
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker stop demo-isika || true'
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker rm demo-isika || true'
-                sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker rmi demo-isika || true'
+                sh 'docker rmi demo-isika || true'
             }
         }
         stage('Build image') {
             steps {
-                echo '-=- Build image -=-'
-                sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker build -t demo-isika .'
+                echo '-=- Docker build -=-'
+                sh 'docker build -t demo-isika .'
             }
         }
-        stage('Run container') {
+        stage('Tag') {
+            steps {
+                echo '-=- Tag image -=-'
+                sh 'docker tag demo-isika ouedraogodocker/demo-isika'
+            }
+        }
+        stage('Login') {
+            steps {
+                echo '-=- Login to dockerhub -=-'
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }
+        stage('Push') {
+            steps {
+                echo '-=- Push to dockerhub -=-'
+                sh 'docker push ouedraogodocker/demo-isika'
+            }
+        }
+        stage('Run container to local') {
             steps {
                 echo '-=- Run container -=-'
-                sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker run -d --name demo-isika -p 8080:8080 demo-isika'
+                sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker run -d --name demo-isika -p 8080:8080 ouedraogodocker/demo-isika'
             }
+        }
+        stage ('Deploy To Prod on AWS'){
+              input{
+                message "Do you want to proceed for production deployment?"
+              }
+            steps {
+                sh 'echo "Deploy into Prod"'
+                sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker stop demo-isika || true'
+                sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker rm demo-isika || true'
+                sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker run -d --name demo-isika -p 8080:8080 ouedraogodocker/demo-isika'
+            }
+        }
+    }
+    post {
+        always {
+           sh 'docker logout'
         }
     }
 }
