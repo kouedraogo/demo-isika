@@ -72,15 +72,15 @@ pipeline {
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker rmi demo-isika || true'
             }
         }
-        stage('Construct image to Staging') {
+        stage('Build image') {
             steps {
-                echo '-=- Deploy project to staging -=-'
+                echo '-=- Build image -=-'
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker build -t demo-isika .'
             }
         }
         stage('Run container') {
             steps {
-                echo '-=- Deploy project to staging - Run -=-'
+                echo '-=- Run container -=-'
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker run -d --name demo-isika -p 8080:8080 demo-isika'
             }
         }
