@@ -47,20 +47,14 @@ pipeline {
                 echo '-=- Clean docker images & container -=-'
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker stop demo-isika || true'
                 sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker rm demo-isika || true'
-				sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker rmi demo-isika || true'
-                sh 'docker rmi demo-isika || true'
+				sh 'ssh -v -o StrictHostKeyChecking=no vagrant@192.168.33.20 sudo docker rmi ouedraogodocker/demo-isika || true'
+                sh 'docker rmi ouedraogodocker/demo-isika || true'
             }
         }
         stage('Build image') {
             steps {
                 echo '-=- Docker build -=-'
-                sh 'docker build -t demo-isika .'
-            }
-        }
-        stage('Tag') {
-            steps {
-                echo '-=- Tag image -=-'
-                sh 'docker tag demo-isika ouedraogodocker/demo-isika'
+                sh 'docker build -t ouedraogodocker/demo-isika .'
             }
         }
         stage('Login') {
@@ -89,7 +83,7 @@ pipeline {
                 sh 'echo "Deploy into Prod"'
                 sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker stop demo-isika || true'
                 sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker rm demo-isika || true'
-				sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker rmi demo-isika || true'
+				sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker rmi ouedraogodocker/demo-isika || true'
                 sh 'ssh -v -o StrictHostKeyChecking=no ubuntu@13.38.10.5 sudo docker run -d --name demo-isika -p 8080:8080 ouedraogodocker/demo-isika'
             }
         }
